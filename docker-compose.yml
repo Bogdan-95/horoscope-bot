@@ -1,0 +1,12 @@
+# Запуск контейнера
+
+version: '3.8'
+services:
+  bot:
+    build: .
+    container_name: horoscope_v2
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
