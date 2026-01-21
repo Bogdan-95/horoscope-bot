@@ -1,62 +1,86 @@
-#Главный файл запуска
-
+""" Главный файл запуска бота """
 import asyncio
 import os
-import logging
+import sys
+from datetime import datetime
 from aiogram import Bot, Dispatcher
 from dotenv import load_dotenv
-from app.handlers.user import router
-from app.database.requests import db_start, get_all_subscribers, update_last_forecast
-from app.services.horoscope_api import HoroscopeAPI
+from loguru import logger
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from apscheduler.triggers.cron import CronTrigger
+
+# Импорты проекта
+import app.database.requests as rq
+from app.handlers.user import router as user_router
+from app.services.horoscope_api import HoroscopeAPI  # Импортируем наш API
+
+# Настройка логов
+logger.remove()
+logger.add(sys.stdout,
+           format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{message}</cyan>")
+
+# Инициализируем API глобально
+api = HoroscopeAPI()
 
 
-async def send_daily_horoscope(bot: Bot):
-    """
-    Фунция-задача для планировщика.
-    Рассылает гороскопы всем активным подписчикам, если контент обновился.
-    """
-    api = HoroscopeAPI()
-    subs = await get_all_subscribers()
-    for user_id, sign, last_text in subs:
-        new_forecast = await api.get_daily_horoscope(sign)
-        # Отправляем только если прогноз новый и качественный
-        if new_forecast and new_forecast != last_text:
+async def daily_broadcast_task(bot: Bot):
+    """ Проверка каждую минуту: рассылка реальных гороскопов """
+    now = datetime.now().strftime("%H:%M")
+    subscribers = await rq.get_users_by_time(now)
+
+    if subscribers:
+        logger.info(f"Рассылка: Найдено {len(subscribers)} подписчиков на {now}")
+        for user_id, sign in subscribers:
             try:
+                # Получаем реальный гороскоп для рассылки
+                horo_text = await api.get_daily_horoscope(sign)
+
                 await bot.send_message(
                     user_id,
-                    f"☕ *Доброе утро! Твой свежий гороскоп:*\n\n{new_forecast}",
+                    f"☀️ *Доброе утро!*\n\n{horo_text}\n\nЖелаем вам продуктивного дня!",
                     parse_mode="Markdown"
                 )
-                await update_last_forecast(user_id, new_forecast)
-                await asyncio.sleep(0.05)  # Плавная отправка, чтобы Telegram не забанил
+                logger.success(f"Рассылка отправлена: {user_id} ({sign})")
+                await asyncio.sleep(0.05)  # Небольшая пауза, чтобы Telegram не забанил за спам
             except Exception as e:
-                logging.error(f"Не удалось отправить сообщение {user_id}: {e}")
+                logger.error(f"Ошибка рассылки пользователю {user_id}: {e}")
 
 
 async def main():
-    """ Точка входа в приложение: запуск БД, планировщика и бота. """
     load_dotenv()
-    await db_start()
+    logger.info("Старт бота...")
+
+    await rq.db_start()
 
     bot = Bot(token=os.getenv('BOT_TOKEN'))
     dp = Dispatcher()
-    dp.include_router(router)
 
-    # Инициализация планировщика задач
+    # Подключаем роутеры
+    dp.include_router(user_router)
+
+    # Настройка планировщика
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
-    # Добавляем задачу на 07:00 по Москве ежедневно
-    scheduler.add_job(send_daily_horoscope, CronTrigger(hour=7, minute=0), args=(bot,))
+    scheduler.add_job(
+        daily_broadcast_task,
+        trigger='cron',
+        minute='*',
+        args=[bot]
+    )
     scheduler.start()
+    logger.info("Планировщик запущен (МСК).")
 
-    logging.basicConfig(level=logging.INFO)
-    print("Бот версии 2.0 (aiogram 3) успешно запущен!")
-    await dp.start_polling(bot)
+    logger.success("🚀 Бот 2.0 запущен и готов принимать сообщения!")
+
+    try:
+        await bot.delete_webhook(drop_pending_updates=True)
+        await dp.start_polling(bot)
+    except Exception as e:
+        logger.critical(f"Ошибка при работе бота: {e}")
+    finally:
+        await bot.session.close()
 
 
 if __name__ == '__main__':
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("Бот остановлен пользователем")
+        logger.warning("Бот остановлен пользователем")

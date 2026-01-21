@@ -8,7 +8,6 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
-*.py[cod]
 
 # Environment variables
 .env
@@ -28,8 +27,6 @@ DAILY_HOROSCOPE_BOT.MD
 # Logs
 *.log
 logs/
-data/*.db
-user_stats.json
 
 # Temporary files
 temp/
