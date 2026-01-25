@@ -1,226 +1,266 @@
-````# 🔮 Daily Horoscope Telegram Bot
+# 🔮 Daily Horoscope Telegram Bot 2.0
 
+![Python](https://img.shields.io/badge/Python-3.11-blue)
+![aiogram](https://img.shields.io/badge/aiogram-3.x-green)
+![Docker](https://img.shields.io/badge/Docker-ready-blue)
+![SQLite](https://img.shields.io/badge/SQLite-async-lightgrey)
+![Status](https://img.shields.io/badge/status-production--ready-success)
 
-| 🐍 | **Python Version** |
-| 🤖 | **Telegram Bot** |
-| 📜 | **License** |
-| 🟢 | **Status** |
+Полнофункциональный **Telegram-бот для ежедневных гороскопов**  
+с подпиской, автоматической рассылкой, переводом и Docker-развёртыванием.
 
-
-#### Полнофункциональный Telegram бот для получения ежедневных гороскопов на русском языке с автоматическим переводом и кэшированием.
-
-## 🚀 Быстрый старт
-
-### 📱 Использование бота
-Просто перейдите: [@My_DailyHoroscope_Bot](https://t.me/My_DailyHoroscope_Bot)
-
-### 🎯 Основные команды
-- `/start` - Приветственное сообщение
-- `/horoscope` - Выбор знака зодиака
-
-## 📸 Демонстрация
-
-### Скриншоты из Telegram
-<p align="center">
-  <img src="screenshots/01.png" alt="Стартовый экран" width="30%" />
-  <img src="screenshots/02.png" alt="Выбор знака зодиака" width="30%" />
-  <img src="screenshots/03.png" alt="Пример гороскопа" width="30%" />
-</p>
-
-<p align="center">
-  <img src="screenshots/04.png" alt="Кнопки навигации" width="50%" />
-</p>
-*Кнопка "Другой гороскоп 🔄" позволяет получать новый прогноз без повторного выбора команды*
-
-### Логи работы (Replit)
-```log
-2026-01-11 20:20:36,860 - horoscope_bot - INFO - ✅ Гороскоп получен успешно для стрелец
-2026-01-11 20:27:59,077 - horoscope_bot - INFO - ✅ Гороскоп получен успешно для стрелец (кеш)
-2026-01-11 20:28:56,743 - horoscope_bot - INFO - ✅ Гороскоп получен успешно для рак
-```
-
-## 🏆 Ключевые достижения проекта
-
-### Что было реализовано с нуля:
-✅ **Полный цикл разработки** - от идеи до продакшена  
-✅ **Многоуровневая архитектура** - API + парсинг + fallback  
-✅ **Автоматический перевод** - интеграция с MyMemory API  
-✅ **Система кэширования** - оптимизация производительности  
-✅ **Статистика пользователей** - сбор и анализ данных  
-✅ **24/7 доступность** - развертывание с авто-восстановлением  
-
-### Технический стек:
-- **Backend**: Python 3.10, pyTelegramBotAPI
-- **API**: RESTful интеграции, авторизация по токенам
-- **База данных**: JSON-файлы для статистики и кэша
-- **DevOps**: Replit хостинг, UptimeRobot мониторинг
-- **Документация**: Полная техническая документация
-
-``
-
-## ⚡ Особенности
-
-### ✅ Рабочий продакшен-проект
-- **24/7 доступность** - развернут на Replit с авто-перезапуском
-- **Мониторинг** - UptimeRobot отслеживает работоспособность
-- **Автоматическое восстановление** - при падении бот перезапускается
-
-### 🛡️ Надежность
-- **Резервные источники** - 3 уровня получения гороскопов
-- **Кэширование** - результаты сохраняются на 1 час
-- **Обработка ошибок** - ретраи, fallback, логирование
-
-### 🌐 Технологический стек
-- **Python 3.10+** - основной язык
-- **pyTelegramBotAPI** - работа с Telegram
-- **Requests** - API запросы
-- **BeautifulSoup4** - парсинг сайтов (резервный источник)
-- **Flask** - веб-сервер для поддержания активности
-
-## 🏗️ Архитектура проекта
-
-```
-horoscope-bot/
-├── 📁 .github/           # GitHub Actions (планируется)
-├── 📄 bot.py            # Основной код бота
-├── 📄 config.py         # Конфигурация
-├── 📄 horoscope.py      # Логика получения гороскопов
-├── 📄 api_client.py     # Клиент для API
-├── 📄 translator.py     # Переводчик MyMemory API
-├── 📄 utils.py          # Утилиты и кэширование
-├── 📄 keep_alive.py     # Веб-сервер для Replit
-├── 📄 requirements.txt  # Зависимости
-├── 📄 .env.example      # Пример переменных окружения
-├── 📄 .gitignore        # Игнорируемые файлы
-└── 📄 README.md         # Эта документация
-```
-
-## 🚀 Развертывание
-
-### Локальный запуск
-```bash
-# Клонирование репозитория
-git clone https://github.com/Bogdan-95/horoscope-bot.git
-cd horoscope-bot
-
-# Установка зависимостей
-pip install -r requirements.txt
-
-# Настройка переменных окружения
-cp .env.example .env
-# Отредактируйте .env файл, добавив токены
-
-# Запуск бота
-python bot.py
-```
-
-### Развертывание на Replit
-1. Импортируйте репозиторий на Replit
-2. Добавьте Secrets (BOT_TOKEN, ASTROLOGY_API_KEY)
-3. Нажмите "Run"
-
-### Развертывание на PythonAnywhere
-1. Загрузите файлы через Git
-2. Установите зависимости в virtual environment
-3. Настройте Scheduled Task для постоянной работы
-
-## 📊 Статистика и мониторинг
-
-### Сбор статистики
-Бот автоматически собирает:
-- Количество уникальных пользователей
-- Популярность знаков зодиака
-- Частоту запросов
-- Сохраняет в `user_stats.json`
-
-### Мониторинг
-- **UptimeRobot**: [Статус монитора](https://dashboard.uptimerobot.com/monitors/802129181)
-- **Replit Console**: логи в реальном времени
-- **Telegram Bot API**: встроенный мониторинг
-
-## 🔧 Технические детали
-
-### Источники данных
-1. **Основной**: OhMana API (бесплатный, без ограничений)
-2. **Резервный**: Парсинг астрологических сайтов
-3. **Fallback**: Локальная база текстов
-
-### Система кэширования
-- Локальное кэширование на 1 час
-- Уменьшение нагрузки на внешние API
-- Автоматическое обновление по истечении TTL
-
-### Обработка ошибок
-- 3 попытки подключения к основному API
-- Автоматическое переключение на резервные источники
-- Детальное логирование всех событий
-
-## 🛠️ Для разработчиков
-
-### Требования
-- Python 3.10+
-- Аккаунт Telegram с @BotFather
-- API ключи (указаны в .env.example)
-
-### Структура кода
-```python
-# Основной поток работы:
-# 1. Пользователь → /horoscope
-# 2. Бот → inline-кнопки со знаками
-# 3. Пользователь → выбор знака
-# 4. Система → проверка кэша
-# 5. Если нет в кэше → запрос к API → перевод
-# 6. Сохранение в кэш → отправка пользователю
-```
-
-### Тестирование
-```bash
-# Проверка токена бота
-curl "https://api.telegram.org/bot<TOKEN>/getMe"
-
-# Проверка API гороскопов
-curl "https://ohmanda.com/api/horoscope/aries"
-```
-
-## 📈 Планы развития
-
-### В разработке
-- [ ] Ежедневные рассылки по расписанию
-- [ ] Подписка на любимый знак
-- [ ] Веб-интерфейс для администрирования
-
-### Запланировано
-- [ ] Мультиязычная поддержка
-- [ ] Интеграция с погодными сервисами
-- [ ] Гороскопы на неделю/месяц
-
-## 🤝 Вклад в проект
-
-1. Форкните репозиторий
-2. Создайте ветку для новой фичи (`git checkout -b feature/AmazingFeature`)
-3. Закоммитьте изменения (`git commit -m 'Add some AmazingFeature'`)
-4. Запушьте ветку (`git push origin feature/AmazingFeature`)
-5. Откройте Pull Request
-
-## 📄 Лицензия
-
-Распространяется под лицензией MIT. Подробнее в файле `LICENSE`.
-
-## 👤 Автор
-
-**Bogdan-95**
-- GitHub: [@Bogdan-95](https://github.com/Bogdan-95)
-- Telegram: [@My_DailyHoroscope_Bot](https://t.me/My_DailyHoroscope_Bot)
-- Telegram: [@bodya_95]()
-- Проект на Replit: [horoscope-bot](https://replit.com/@b95rengo/horoscope-bot)
-
-## 🙏 Благодарности
-
-- [OhMana API](https://ohmanda.com/api/horoscope/) за бесплатный API гороскопов
-- [MyMemory Translator](https://mymemory.translated.net/) за API перевода
-- [Replit](https://replit.com) за бесплатный хостинг
-- [UptimeRobot](https://uptimerobot.com) за мониторинг доступности
+> Проект выполнен как **production / portfolio-проект**  
+> с упором на архитектуру, стабильность и читаемость кода.
 
 ---
 
-⭐ **Если проект был полезен, поставьте звезду на GitHub!**````
+## 🚀 Возможности бота
+
+### 🔮 Гороскопы
+- Гороскоп на день по знаку зодиака
+- Реальные данные через внешний API
+- Автоматический перевод на русский язык
+
+### 🔔 Подписка и рассылка
+- Подписка на ежедневный гороскоп
+- Выбор знака зодиака
+- Настройка времени рассылки (утро)
+- Асинхронная отправка без блокировок
+
+### ❤️ Совместимость знаков
+- Выбор двух знаков
+- Расчёт совместимости
+
+### 🧠 Технические возможности
+- Асинхронная архитектура (`aiogram 3`)
+- Планировщик задач (`APScheduler`)
+- SQLite + `aiosqlite`
+- Docker + docker-compose
+- Логирование (`loguru`)
+- Хранение данных вне контейнера
+
+---
+
+## 📸 Демонстрация
+
+<p align="center">
+  <img src="screenshots/Start.png.png" width="30%" />
+  <img src="screenshots/answer.png.png" width="30%" />
+  <img src="screenshots/compatibility.png.png" width="30%" />
+</p>
+
+---
+
+## 🏗️ Архитектура проекта
+
+
+
+
+
+
+
+## 🧠 Архитектура проекта
+```markdown
+horoscope_bot/
+├── app/
+│   ├── database/
+│   │   └── requests.py        # Работа с SQLite (aiosqlite)
+│   ├── handlers/
+│   │   └── user.py            # Все пользовательские сценарии
+│   ├── keyboards/
+│   │   └── inline.py          # Inline / Reply клавиатуры
+│   ├── services/
+│   │   ├── horoscope_api.py   # API + fallback + совместимость
+│   │   └── translator_service.py
+│   └── __init__.py
+│
+├── data/
+│   └── database.db            # SQLite база
+│
+├── screenshots/               # Скриншоты бота
+├── docker-compose.yml
+├── requirements.txt
+├── main.py                    # Точка входа
+├── README.md
+└── .env.example
+```
+
+---
+
+## ⚙️ Технологический стек
+
+- **Python 3.11**
+- **aiogram 3**
+- **SQLite + aiosqlite**
+- **APScheduler**
+- **Docker / Docker Compose**
+- **deep-translator**
+- **loguru**
+- **dotenv**
+
+---
+
+## 🐳 Запуск через Docker (рекомендуется)
+
+### 1️⃣ Подготовка `.env`
+
+```env
+BOT_TOKEN=your_telegram_bot_token
+ASTROLOGY_API_KEY=your_api_key
+```
+### 2️⃣ Сборка и запуск
+```bash
+docker compose up -d --build
+```
+### 3️⃣ Просмотр логов
+```bash
+docker logs -f horoscope_bot_v2
+```
+### 4️⃣ Остановка
+```bash
+docker compose down
+```
+
+### 🐳 docker-compose.yml
+
+Проект полностью готов к запуску в Docker.
+
+```yaml
+services:
+  bot:
+    build: .
+    container_name: horoscope_bot_v2
+    restart: always
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+
+```
+## Почему Docker:
+- одинаковая среда запуска
+- лёгкий деплой на VPS
+- безопасное хранение данных
+- автоперезапуск контейнера
+
+
+## 🔄 Логика работы бота 
+```text
+Пользователь
+   ↓
+Inline-меню
+   ↓
+Выбор действия
+   ├─ Гороскоп → API → Перевод → Ответ
+   ├─ Совместимость → Логика стихий → Ответ
+   └─ Подписка → SQLite → APScheduler → Рассылка
+
+```
+
+## ⏰ Планировщик рассылки
+Для автоматической отправки гороскопов используется
+APScheduler (AsyncIO Scheduler).
+
+### Логика работы:
+
+- проверка подписок каждую минуту
+- отправка сообщений строго по выбранному времени
+- таймзона: Europe/Moscow
+
+```python
+scheduler.add_job(
+    daily_broadcast_task,
+    trigger='cron',
+    minute='*'
+)
+```
+
+## 🗄️ База данных
+### SQLite (aiosqlite)
+В проекте используется SQLite с асинхронным доступом через aiosqlite.
+
+### Таблица users:
+
+- tg_id — Telegram ID пользователя (PRIMARY KEY)
+- username — username в Telegram
+- sign — выбранный знак зодиака
+- is_subscribed — статус подписки
+- mailing_time — время рассылки (МСК)
+- last_forecast — последний отправленный прогноз
+
+### Особенности:
+
+- база хранится вне Docker-контейнера
+- легко подключается к DBeaver
+- данные не теряются при перезапуске контейнера
+```yaml
+volumes:
+  - ./data:/app/data
+```
+
+
+## 🌐 Источники данных
+### Основной
+
+1. Ohmanda Horoscope API
+    - https://ohmanda.com/api/horoscope/{sign}
+    - Реальные гороскопы на сегодня для всех знаков
+### Перевод
+1. GoogleTranslator (deep-translator)
+2. Асинхронная обертка через run_in_executor
+
+### Fallback - механизм
+
+1. Локальный генератор прогнозов
+2. Бот не падает без интернета
+
+# 🚀 Запуск проекта
+### 🚀🐳 Запуск проекта (Docker)
+
+```bash
+docker compose up -d --build
+```
+### Остановка:
+```bash
+docker compose down
+```
+### Просмотр логов:
+```bash
+docker logs -f horoscope_bot_v2
+```
+
+
+## 🚀 Локальный запуск 🐍 
+
+```bash
+git clone https://github.com/Bogdan-95/horoscope-bot.git
+cd horoscope-bot
+
+python -m venv .venv
+source .venv/bin/activate
+
+pip install -r requirements.txt
+
+cp .env.example .env
+python main.py
+
+```
+
+## 📦 Зависимости 
+```text
+aiogram==3.15.0
+aiosqlite==0.20.0
+apscheduler==3.11.2
+python-dotenv==1.0.1
+loguru==0.7.2
+aiohttp==3.10.11
+deep-translator==1.11.4
+tzdata
+```
+
+# 👤 Автор 
+## Bogdan-95
+* ## GitHub: https://github.com/Bogdan-95
+* ## Telegram: @bodya_95
+
+## ⭐ Если проект был полезен — поставьте звезду на GitHub

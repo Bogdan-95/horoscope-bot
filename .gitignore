@@ -9,6 +9,11 @@ __pycache__/
 *.pyo
 *.pyd
 
+# Runtime data
+data/*.db
+data/backups/
+data/health.txt
+
 # Environment variables
 .env
 .env.local

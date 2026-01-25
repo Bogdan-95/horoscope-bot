@@ -2,16 +2,17 @@
 import asyncio
 import os
 import sys
+import app.database.requests as rq
 from datetime import datetime
 from aiogram import Bot, Dispatcher
 from dotenv import load_dotenv
 from loguru import logger
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-
-# Импорты проекта
-import app.database.requests as rq
+from app.services.health import update_health
 from app.handlers.user import router as user_router
 from app.services.horoscope_api import HoroscopeAPI  # Импортируем наш API
+from app.services.backup_service import backup_database
+from app.handlers import admin
 
 # Настройка логов
 logger.remove()
@@ -56,15 +57,30 @@ async def main():
 
     # Подключаем роутеры
     dp.include_router(user_router)
+    dp.include_router(admin.router)
 
     # Настройка планировщика
     scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
+    # Задача рассылки
     scheduler.add_job(
         daily_broadcast_task,
         trigger='cron',
         minute='*',
         args=[bot]
     )
+    # HEALTHCHECK - сигнал, что бот жив
+    scheduler.add_job(
+        update_health,
+        trigger="interval",
+        seconds=60
+    )
+    # автобэкап базы данных (SQLite)
+    scheduler.add_job(
+        backup_database,
+        trigger="interval",
+        minutes=10
+    )
+
     scheduler.start()
     logger.info("Планировщик запущен (МСК).")
 

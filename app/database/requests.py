@@ -29,6 +29,13 @@ async def set_user(tg_id, username):
                 await db.commit()
                 logger.info(f"БД: Новый пользователь {tg_id} (@{username}) добавлен.")
 
+async def get_users_count() -> int:
+    async with aiosqlite.connect("data/database.db") as db:
+        cursor = await db.execute("SELECT COUNT(*) FROM users")
+        (count,) = await cursor.fetchone()
+        return count
+
+
 async def update_subscription(tg_id, status: bool, sign: str = None, time: str = '07:00'):
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("""
