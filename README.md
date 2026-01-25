@@ -260,7 +260,7 @@ tzdata
 
 # 👤 Автор 
 ## Bogdan-95
-* ## GitHub: https://github.com/Bogdan-95
-* ## Telegram: @bodya_95
+* ### GitHub: https://github.com/Bogdan-95
+* ### Telegram: @bodya_95
 
-## ⭐ Если проект был полезен — поставьте звезду на GitHub
+### ⭐ Если проект был полезен — поставьте звезду на GitHub
