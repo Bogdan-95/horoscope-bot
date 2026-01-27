@@ -14,6 +14,8 @@ data/*.db
 data/backups/
 data/health.txt
 *.db
+data/database.db
+
 
 # Environment variables
 .env
