@@ -1,8 +1,12 @@
+# Сервис для получения гороскопов и совместимости знаков зодиака
 import aiohttp
 import random
 from datetime import datetime
 from .translator_service import SimpleTranslator
 
+#==================================================
+# ГОРСКОПЫ И СОВМЕСТИМОСТЬ
+#==================================================
 
 class HoroscopeAPI:
     def __init__(self):
@@ -40,37 +44,82 @@ class HoroscopeAPI:
 
         # 2. РЕЗЕРВНЫЙ ВАРИАНТ (Если API упал)
         return self._get_backup_prediction(sign_ru)
-
+    # =================================================
+    # СОВМЕСТИМОСТЬ ЗНАКОВ
+    # =================================================
     def get_compatibility(self, sign1: str, sign2: str):
-        """ Расчет совместимости """
         elem1 = self.elements.get(sign1)
         elem2 = self.elements.get(sign2)
 
-        # Базовая логика совместимости стихий
-        score = random.randint(50, 80)  # Случайная база
+        score = random.randint(55, 75)
+        description = "Звезды говорят, что многое зависит от ваших усилий."
+
+        combos = {
+            ('fire', 'fire'): (
+                (80, 95),
+                "Две искры превращаются в пламя.\n"
+                "Ваш союз полон энергии, страсти и амбиций.\n"
+                "Главное — не бороться за лидерство."
+            ),
+            ('earth', 'earth'): (
+                (80, 95),
+                "Прочный фундамент и общие ценности.\n"
+                "Вы умеете строить долгие и стабильные отношения.\n"
+                "Иногда стоит добавить спонтанности."
+            ),
+            ('air', 'air'): (
+                (80, 95),
+                "Легкость, разговоры и идеи.\n"
+                "Вы вдохновляете друг друга и не терпите скуки.\n"
+                "Важно не уходить от реальных чувств."
+            ),
+            ('water', 'water'): (
+                (80, 95),
+                "Глубокая эмоциональная связь.\n"
+                "Вы чувствуете партнера на интуитивном уровне.\n"
+                "Главное — не утонуть в эмоциях."
+            ),
+            ('fire', 'air'): (
+                (75, 90),
+                "Огонь и Воздух усиливают друг друга.\n"
+                "Яркий союз, полный страсти и идей.\n"
+                "Отличная пара для приключений."
+            ),
+            ('water', 'earth'): (
+                (75, 90),
+                "Вода питает Землю, помогая ей расти.\n"
+                "Надежный союз заботы и стабильности.\n"
+                "Хорошая основа для семьи."
+            ),
+            ('fire', 'water'): (
+                (40, 60),
+                "Пламя и вода создают пар.\n"
+                "Эмоционально, но непросто.\n"
+                "Потребуется терпение."
+            ),
+        }
+
+        key = (elem1, elem2)
+        rev_key = (elem2, elem1)
 
         if sign1 == sign2:
             score = random.randint(85, 100)
-            text = "Идеальное зеркало! Вы понимаете друг друга без слов."
-        elif elem1 == elem2:
-            score = random.randint(80, 95)
-            text = "Одна стихия! Ваш союз полон гармонии и поддержки."
-        elif (elem1 == 'fire' and elem2 == 'air') or (elem1 == 'air' and elem2 == 'fire'):
-            score = random.randint(75, 90)
-            text = "Огонь и Воздух раздувают страсть! Яркая пара."
-        elif (elem1 == 'water' and elem2 == 'earth') or (elem1 == 'earth' and elem2 == 'water'):
-            score = random.randint(75, 90)
-            text = "Вода питает Землю. Надежный и плодотворный союз."
-        elif (elem1 == 'fire' and elem2 == 'water') or (elem1 == 'water' and elem2 == 'fire'):
-            score = random.randint(40, 60)
-            text = "Пар и пламя. Сложно, но очень эмоционально."
-        else:
-            text = "Звезды говорят, что все зависит от вас! Противоположности притягиваются."
+            description = (
+                "Полное отражение друг друга.\n"
+                "Вы понимаете партнера без слов.\n"
+                "Идеально при зрелом подходе."
+            )
+        elif key in combos:
+            (min_s, max_s), description = combos[key]
+            score = random.randint(min_s, max_s)
+        elif rev_key in combos:
+            (min_s, max_s), description = combos[rev_key]
+            score = random.randint(min_s, max_s)
 
         return (
             f"❤️ *Совместимость: {sign1.capitalize()} + {sign2.capitalize()}*\n"
             f"📊 *Результат:* {score}%\n\n"
-            f"💬 {text}"
+            f"💬 {description}"
         )
 
     def _get_backup_prediction(self, sign):

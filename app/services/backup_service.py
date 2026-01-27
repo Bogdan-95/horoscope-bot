@@ -1,14 +1,20 @@
-# backup
+# backup service.py
 import shutil
 from datetime import datetime
 from pathlib import Path
 from loguru import logger
 
+# =========================
+# НАСТРОЙКИ БЭКАПОВ
+# =========================
 
 DB_PATH = Path("data/database.db")
 BACKUP_DIR = Path("data/backups")
 MAX_BACKUPS = 10
 
+# =========================
+# ФУНКЦИИ БЭКАПОВ
+# =========================
 
 async def backup_database():
     try:
@@ -28,6 +34,7 @@ async def backup_database():
     except Exception as e:
         logger.exception(f"Ошибка при бэкапе базы: {e}")
 
+# Удаление старых бэкапов, если превышен лимит
 def cleanup_old_backups():
     backups = sorted(
         BACKUP_DIR.glob("database_*.db"),

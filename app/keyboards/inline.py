@@ -1,8 +1,8 @@
-
+# Клавиатуры бота
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-
+# Главная клавиатура под сообщением
 def main_menu():
     """ Главное меню (кнопки под сообщением) """
     builder = InlineKeyboardBuilder()

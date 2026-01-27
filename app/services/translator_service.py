@@ -1,4 +1,4 @@
-# Перевод
+# Перевод текста с английского на русский с использованием deep-translator
 
 import asyncio
 from deep_translator import GoogleTranslator

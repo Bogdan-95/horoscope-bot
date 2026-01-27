@@ -13,6 +13,7 @@ __pycache__/
 data/*.db
 data/backups/
 data/health.txt
+*.db
 
 # Environment variables
 .env

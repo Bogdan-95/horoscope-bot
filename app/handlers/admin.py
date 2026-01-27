@@ -1,3 +1,4 @@
+# файл с обработчиками команд для администраторов бота
 from aiogram import Router
 from aiogram.filters import Command
 from aiogram.types import Message
@@ -8,8 +9,10 @@ from app.database.requests import get_users_count
 
 router = Router()
 
+# ID администраторов бота
 ADMIN_IDS = {930734096}
 
+# команда /health - проверка состояния бота
 @router.message(Command("health"))
 async def health_command(message: Message):
     if message.from_user.id not in ADMIN_IDS:

@@ -1,15 +1,15 @@
 """ Главный файл запуска бота """
-import asyncio
+import asyncio # Асинхронность
 import os
 import sys
-import app.database.requests as rq
+import app.database.requests as rq # Импортируем наши запросы к БД
 from datetime import datetime
-from aiogram import Bot, Dispatcher
+from aiogram import Bot, Dispatcher # Основные классы aiogram
 from dotenv import load_dotenv
 from loguru import logger
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from app.services.health import update_health
-from app.handlers.user import router as user_router
+from app.services.health import update_health # Функция обновления healthcheck
+from app.handlers.user import router as user_router # Импортируем роутер пользователя
 from app.services.horoscope_api import HoroscopeAPI  # Импортируем наш API
 from app.services.backup_service import backup_database
 from app.handlers import admin
@@ -22,6 +22,9 @@ logger.add(sys.stdout,
 # Инициализируем API глобально
 api = HoroscopeAPI()
 
+# =========================
+# ЗАДАЧИ ПЛАНИРОВЩИКА
+# =========================
 
 async def daily_broadcast_task(bot: Bot):
     """ Проверка каждую минуту: рассылка реальных гороскопов """
@@ -45,6 +48,9 @@ async def daily_broadcast_task(bot: Bot):
             except Exception as e:
                 logger.error(f"Ошибка рассылки пользователю {user_id}: {e}")
 
+# =========================
+# ГЛАВНАЯ ФУНКЦИЯ
+# =========================
 
 async def main():
     load_dotenv()
@@ -94,6 +100,9 @@ async def main():
     finally:
         await bot.session.close()
 
+# =========================
+# ЗАПУСК БОТА
+# =========================
 
 if __name__ == '__main__':
     try:
