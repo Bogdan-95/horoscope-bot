@@ -1,251 +1,293 @@
-import asyncio
-import random
+# app/handlers/user.py
+# Основные команды бота
+
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
-from aiogram.filters import CommandStart
-from aiogram.exceptions import TelegramBadRequest
-from loguru import logger
-
-import app.database.requests as rq
-import app.keyboards.inline as kb
+from app.utils.logger import logger
+from app.database.crud import get_user, create_user, update_user_sign
 from app.services.horoscope_api import HoroscopeAPI
-
-router = Router()
-api = HoroscopeAPI()
-
-ANIM_LOADING = (
-    "https://media3.giphy.com/media/v1.Y2lkPTc5MGI3NjExZjJoaTEyaWJ2dnZxdG5wdXRudnU0bWo3NzR5dzlzZjc3cDlyeG1xZCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3og0IFrHkIglEOg8Ba/giphy.gif"
+from app.keyboards.main import (
+    main_menu_kb, zodiac_kb, help_kb, back_to_menu_kb,
+    back_kb  # УБРАЛИ reply_main_menu - он не используется
 )
 
-# ==================================================
-# START / ГЛАВНОЕ МЕНЮ
-# ==================================================
+router = Router()
+horoscope_api = HoroscopeAPI()
 
-@router.message(CommandStart())
-async def cmd_start(message: Message):
-    logger.info(f"START: Пользователь {message.from_user.id}")
-    await rq.set_user(message.from_user.id, message.from_user.username)
 
-    await message.answer("✨ Звезды сошлись!", reply_markup=kb.reply_main_menu())
+def u(user) -> str:
+    """Форматирует информацию о пользователе для логов"""
+    if not user:
+        return "Unknown"
+    name = user.first_name or user.username or "NoName"
+    return f"{name} ({user.id})"
+
+
+# ===================== START =====================
+
+@router.message(F.text == "/start")
+async def start(message: Message):
+    user = message.from_user
+    logger.info(f"[START] {u(user)}")
+
+    create_user(user.id, user.username, user.first_name)
+
     await message.answer(
-        "🌟 *Добро пожаловать в мир астрологии!*\n\n"
-        "Я — ваш персональный астрологический помощник.\n"
-        "Что вы хотите узнать сегодня?",
-        parse_mode="Markdown",
-        reply_markup=kb.main_menu()
+        "🔮 *Добро пожаловать в Daily Horoscope Bot!*\n\n"
+        "✨ *Возможности бота:*\n"
+        "• 🔮 Персональный гороскоп\n"
+        "• ❤️ Совместимость знаков\n"
+        "• 🔔 Ежедневная рассылка\n"
+        "• 📊 Детальный анализ\n\n"
+        "Выберите действие 👇",
+        reply_markup=main_menu_kb()
     )
+
+
+@router.message(F.text == "/help")
+async def help_command(message: Message):
+    logger.info(f"[HELP_CMD] {u(message.from_user)}")
+    await show_help(message)
 
 
 @router.message(F.text == "✨ Главное меню")
-async def msg_main_menu(message: Message):
-    logger.info(f"MENU: Главное меню ({message.from_user.id})")
+async def main_menu_reply(message: Message):
+    logger.info(f"[MAIN_MENU_REPLY] {u(message.from_user)}")
+    await show_menu(message)
+
+
+# ===================== MENU =====================
+
+@router.callback_query(F.data == "menu")
+async def menu_callback(callback: CallbackQuery):
+    logger.info(f"[MENU] {u(callback.from_user)}")
+    await callback.message.edit_text(
+        "📋 *Главное меню*",
+        reply_markup=main_menu_kb()
+    )
+    await callback.answer()
+
+
+# ИСПРАВЛЕНО: Добавили фильтр, чтобы НЕ перехватывать все сообщения!
+@router.message(F.text == "/menu")
+async def show_menu(message: Message):
+    """Обработчик команды /menu"""
+    logger.info(f"[MENU_CMD] {u(message.from_user)}")
     await message.answer(
-        "🔮 *Главное меню:*",
-        parse_mode="Markdown",
-        reply_markup=kb.main_menu()
+        "📋 *Главное меню*",
+        reply_markup=main_menu_kb()
     )
 
 
-@router.callback_query(F.data == "to_main")
-async def back_to_main(callback: CallbackQuery):
-    logger.info(f"NAV: Возврат в главное меню ({callback.from_user.id})")
-    try:
-        await callback.message.edit_text(
-            "🔮 *Главное меню:*",
-            parse_mode="Markdown",
-            reply_markup=kb.main_menu()
-        )
-    except TelegramBadRequest:
-        await callback.message.answer(
-            "🔮 *Главное меню:*",
-            parse_mode="Markdown",
-            reply_markup=kb.main_menu()
-        )
-    await callback.answer()
+@router.callback_query(F.data == "back_to_menu")
+async def back_to_menu_callback(callback: CallbackQuery):
+    logger.info(f"[BACK_TO_MENU] {u(callback.from_user)}")
+    await menu_callback(callback)
 
 
-# ==================================================
-# ГОРОСКОП
-# ==================================================
+# ===================== HELP =====================
 
-@router.callback_query(F.data == "get_horo")
-async def list_signs(callback: CallbackQuery):
-    logger.info(f"HORO_LIST: {callback.from_user.id}")
-    await callback.message.edit_text(
-        "✨ Выберите ваш знак зодиака:",
-        reply_markup=kb.signs_kb()
-    )
-    await callback.answer()
+@router.callback_query(F.data == "help")
+async def help_callback(callback: CallbackQuery):
+    logger.info(f"[HELP_CALLBACK] {u(callback.from_user)}")
+    await show_help_callback(callback)
 
 
-@router.callback_query(F.data.startswith("show_sign_"))
-async def show_horo(callback: CallbackQuery):
-    sign = callback.data.split("_")[2]
-    logger.info(f"HORO: {sign.upper()} ({callback.from_user.id})")
-
-    await callback.message.delete()
-
-    loading = await callback.message.answer_animation(
-        animation=ANIM_LOADING,
-        caption=f"🔮 *Связь с космосом для {sign.capitalize()}...*",
-        parse_mode="Markdown"
-    )
-
-    text = await api.get_daily_horoscope(sign)
-    await loading.delete()
-
-    await callback.message.answer(
-        f"{text}\n\n🍀 *Число удачи:* `{random.randint(1, 99)}`",
-        parse_mode="Markdown",
-        reply_markup=kb.back_to_main_kb()
-    )
-    await callback.answer()
-
-
-# ==================================================
-# СОВМЕСТИМОСТЬ
-# ==================================================
-
-@router.callback_query(F.data == "compat_start")
-async def compat_step_1(callback: CallbackQuery):
-    logger.info(f"COMPAT: Старт ({callback.from_user.id})")
-    await callback.message.edit_text(
-        "❤️ *Совместимость*\n\nВыберите **ВАШ** знак зодиака:",
-        parse_mode="Markdown",
-        reply_markup=kb.compat_signs_kb(step="first")
-    )
-    await callback.answer()
-
-
-@router.callback_query(F.data.startswith("compat_1_"))
-async def compat_step_2(callback: CallbackQuery):
-    sign1 = callback.data.split("_")[2]
-    await callback.message.edit_text(
-        f"❤️ Первый знак: *{sign1.capitalize()}*\n\n"
-        f"Теперь выберите знак **ПАРТНЕРА**:",
-        parse_mode="Markdown",
-        reply_markup=kb.compat_signs_kb(step="second", sign1=sign1)
-    )
-    await callback.answer()
-
-
-@router.callback_query(F.data.startswith("compat_calc_"))
-async def compat_finish(callback: CallbackQuery):
-    _, _, sign1, sign2 = callback.data.split("_")
-    logger.info(f"COMPAT: {sign1.upper()} + {sign2.upper()} ({callback.from_user.id})")
-
-    await callback.message.edit_text(
-        "💞 *Звезды анализируют вашу совместимость...*",
-        parse_mode="Markdown"
-    )
-    await asyncio.sleep(1.5)
-
-    result = api.get_compatibility(sign1, sign2)
-    await callback.message.edit_text(
-        result,
-        parse_mode="Markdown",
-        reply_markup=kb.back_to_main_kb()
-    )
-    await callback.answer()
-
-
-# ==================================================
-# ПОДПИСКА
-# ==================================================
-
-@router.callback_query(F.data == "sub_manage")
-@router.message(F.text == "🔔 Подписка")
-async def sub_manage(event: Message | CallbackQuery):
-    user_id = event.from_user.id
-    user = await rq.get_user_info(user_id)
-    is_active = user.get("is_subscribed") if user else False
-
-    text = "🔔 *Настройка уведомлений*\n\n"
-
-    if is_active:
-        text += (
-            f"✅ Активно для: *{user['sign'].capitalize()}*\n"
-            f"⏰ Время: *{user['mailing_time']}* (МСК)"
-        )
-        markup = kb.unsubscribe_kb()
-    else:
-        text += "❌ Уведомления выключены.\nВыберите знак:"
-        markup = kb.signs_kb(prefix="sub_sign_")
-
-    if isinstance(event, Message):
-        await event.answer(text, parse_mode="Markdown", reply_markup=markup)
-    else:
-        await event.message.edit_text(text, parse_mode="Markdown", reply_markup=markup)
-        await event.answer()
-
-
-@router.callback_query(F.data.startswith("sub_sign_"))
-async def sub_choose_time(callback: CallbackQuery):
-    sign = callback.data.split("_")[2]
-    await callback.message.edit_text(
-        f"⏰ *{sign.capitalize()}*\nВыберите время (МСК):",
-        parse_mode="Markdown",
-        reply_markup=kb.time_kb(sign)
-    )
-    await callback.answer()
-
-
-@router.callback_query(F.data.startswith("set_time_"))
-async def sub_confirm(callback: CallbackQuery):
-    _, _, time, sign = callback.data.split("_")
-    logger.info(f"SUB: {callback.from_user.id} → {sign} {time}")
-
-    await rq.subscribe_user(callback.from_user.id, sign, time)
-
-    await callback.message.edit_text(
-        f"✅ *Подписка оформлена!*\n\n"
-        f"*{sign.capitalize()}* — каждый день в *{time}* (МСК)",
-        parse_mode="Markdown",
-        reply_markup=kb.back_to_main_kb()
-    )
-    await callback.answer()
-
-
-@router.callback_query(F.data == "unsub")
-async def unsub(callback: CallbackQuery):
-    logger.info(f"UNSUB: {callback.from_user.id}")
-    await rq.unsubscribe_user(callback.from_user.id)
-
-    await callback.message.edit_text(
-        "🔕 *Подписка отключена.*",
-        parse_mode="Markdown",
-        reply_markup=kb.back_to_main_kb()
-    )
-    await callback.answer()
-
-
-# ==================================================
-# ПОМОЩЬ
-# ==================================================
-
-@router.callback_query(F.data == "help_guide")
-@router.message(F.text == "🆘 Помощь")
-async def help_cmd(event: Message | CallbackQuery):
-    logger.info(f"HELP: Просмотр справки ({event.from_user.id})")
-
+async def show_help(message: Message):
     help_text = (
-        "📖 *Меню помощи*\n\n"
-        "• *Узнать гороскоп* — прогноз на сегодня\n"
-        "• *Совместимость* — проверка отношений\n"
-        "• *Подписка* — ежедневный гороскоп\n\n"
-        r"👨‍💻 Разработчик: @bodya\_95"
+        "🆘 *Помощь по боту*\n\n"
+        "✨ *Основные функции:*\n"
+        "• 🔮 *Гороскоп* - ежедневный прогноз для вашего знака\n"
+        "• ❤️ *Совместимость* - проверьте совместимость двух знаков\n"
+        "• ♻️ *Выбрать знак* - установите свой знак зодиака\n"
+        "• 🔔 *Рассылка* - получайте гороскопы автоматически\n\n"
+        "📝 *Как пользоваться:*\n"
+        "1. Сначала выберите свой знак в меню\n"
+        "2. Получайте гороскопы ежедневно\n"
+        "3. Проверяйте совместимость с друзьями\n"
+        "4. Настройте удобное время рассылки\n\n"
+        "❓ *Если возникли проблемы:*\n"
+        "• Перезапустите бота командой /start\n"
+        "• Обратитесь к разработчику через кнопку ниже\n\n"
+        "💡 *Совет:* Используйте кнопку '✨ Главное меню' для быстрой навигации"
     )
 
-    if isinstance(event, Message):
-        await event.answer(
-            help_text,
-            parse_mode="Markdown",
-            reply_markup=kb.back_to_main_kb()
+    await message.answer(help_text, reply_markup=help_kb())
+
+
+async def show_help_callback(callback: CallbackQuery):
+    help_text = (
+        "🆘 *Помощь по боту*\n\n"
+        "✨ *Основные функции:*\n"
+        "• 🔮 *Гороскоп* - ежедневный прогноз для вашего знака\n"
+        "• ❤️ *Совместимость* - проверьте совместимость двух знаков\n"
+        "• ♻️ *Выбрать знак* - установите свой знак зодиака\n"
+        "• 🔔 *Рассылка* - получайте гороскопы автоматически\n\n"
+        "📝 *Как пользоваться:*\n"
+        "1. Сначала выберите свой знак в меню\n"
+        "2. Получайте гороскопы ежедневно\n"
+        "3. Проверяйте совместимость с друзьями\n"
+        "4. Настройте удобное время рассылки\n\n"
+        "❓ *Если возникли проблемы:*\n"
+        "• Перезапустите бота командой /start\n"
+        "• Обратитесь к разработчику через кнопку ниже"
+    )
+
+    await callback.message.edit_text(help_text, reply_markup=help_kb())
+    await callback.answer()
+
+
+@router.callback_query(F.data == "help_instructions")
+async def help_instructions(callback: CallbackQuery):
+    logger.info(f"[HELP_INSTRUCTIONS] {u(callback.from_user)}")
+
+    instructions = (
+        "📚 *ИНСТРУКЦИЯ ПО ИСПОЛЬЗОВАНИЮ БОТА*\n\n"
+
+        "1️⃣ *Начало работы:*\n"
+        "• Нажмите /start для запуска бота\n"
+        "• Выберите свой знак зодиака в меню\n\n"
+
+        "2️⃣ *Получение гороскопа:*\n"
+        "• Нажмите кнопку '🔮 Гороскоп'\n"
+        "• Бот покажет ваш ежедневный прогноз\n"
+        "• Гороскоп обновляется каждый день\n\n"
+
+        "3️⃣ *Проверка совместимости:*\n"
+        "• Нажмите '❤️ Совместимость'\n"
+        "• Выберите первый знак\n"
+        "• Выберите второй знак\n"
+        "• Получите детальный анализ совместимости\n\n"
+
+        "4️⃣ *Настройка рассылки:*\n"
+        "• Нажмите '🔔 Рассылка'\n"
+        "• Выберите удобное время\n"
+        "• Включите ежедневные уведомления\n"
+        "• Получайте гороскопы автоматически\n\n"
+
+        "5️⃣ *Навигация:*\n"
+        "• '⬅️ В меню' - вернуться в главное меню\n"
+        "• '🔙 Назад' - вернуться на предыдущий экран\n"
+        "• '❌ Отмена' - отменить текущее действие\n"
+    )
+
+    await callback.message.edit_text(instructions, reply_markup=back_kb("help"))
+    await callback.answer()
+
+
+@router.callback_query(F.data == "help_faq")
+async def help_faq(callback: CallbackQuery):
+    logger.info(f"[HELP_FAQ] {u(callback.from_user)}")
+
+    faq = (
+        "❓ *ЧАСТО ЗАДАВАЕМЫЕ ВОПРОСЫ*\n\n"
+
+        "🤔 *Как часто обновляется гороскоп?*\n"
+        "Гороскоп обновляется ежедневно в 00:00 по Московскому времени.\n\n"
+
+        "🔮 *Откуда берутся прогнозы?*\n"
+        "Прогнозы основаны на астрологических расчетах и обновляются из проверенных источников.\n\n"
+
+        "❤️ *Насколько точна совместимость?*\n"
+        "Совместимость рассчитывается на основе астрологических данных, но помните, что отношения зависят от людей.\n\n"
+
+        "💾 *Сохраняется ли мой знак?*\n"
+        "Да, ваш знак сохраняется в базе данных. Вы можете изменить его в любое время.\n\n"
+
+        "⏰ *Можно ли получать гороскоп по расписанию?*\n"
+        "Да! Настройте удобное время в разделе '🔔 Рассылка'.\n\n"
+
+        "📱 *Бот работает на всех устройствах?*\n"
+        "Да, бот работает на телефонах, планшетах и компьютерах через Telegram.\n\n"
+
+        "🆘 *Как связаться с поддержкой?*\n"
+        "Нажмите кнопку '📞 Связаться с поддержкой' в меню помощи."
+    )
+
+    await callback.message.edit_text(faq, reply_markup=back_kb("help"))
+    await callback.answer()
+
+
+# ===================== SIGN =====================
+
+@router.callback_query(F.data == "choose_sign")
+async def choose_sign(callback: CallbackQuery):
+    logger.info(f"[CHOOSE_SIGN] {u(callback.from_user)}")
+
+    await callback.message.edit_text(
+        "♈ *Выберите ваш знак зодиака:*",
+        reply_markup=zodiac_kb("set_sign:")
+    )
+    await callback.answer()
+
+
+@router.callback_query(F.data.startswith("set_sign:"))
+async def set_sign(callback: CallbackQuery):
+    logger.info(f"[SET_SIGN_START] {u(callback.from_user)}")
+    logger.info(f"[SET_SIGN_DATA] Callback data: {callback.data}")
+
+    try:
+        sign = callback.data.split(":")[1]
+        logger.info(f"[SET_SIGN_EXTRACT] Extracted sign: {sign}")
+
+        logger.info(f"[SET_SIGN_UPDATE] Updating sign for user {callback.from_user.id}")
+        update_user_sign(callback.from_user.id, sign)
+        logger.info(f"[SET_SIGN_UPDATED] Sign updated successfully")
+
+        await callback.message.edit_text(
+            "✅ *Знак сохранён!*\n\n"
+            f"✨ Теперь ваш знак: *{sign.capitalize()}*\n\n"
+            "Теперь вы можете получать персональные гороскопы и настраивать рассылку.",
+            reply_markup=back_to_menu_kb()
         )
-    else:
-        await event.message.edit_text(
-            help_text,
-            parse_mode="Markdown",
-            reply_markup=kb.back_to_main_kb()
+
+        logger.info(f"[SET_SIGN_COMPLETE] Message sent successfully")
+
+    except Exception as e:
+        logger.exception(f"[SET_SIGN_ERROR] Error: {e}")
+        await callback.answer("❌ Ошибка сохранения знака", show_alert=True)
+
+    await callback.answer()
+
+
+# ===================== HOROSCOPE =====================
+
+@router.callback_query(F.data == "daily_horoscope")
+async def daily_horoscope(callback: CallbackQuery):
+    user_data = get_user(callback.from_user.id)
+    logger.info(f"[HOROSCOPE_REQUEST] {u(callback.from_user)}")
+
+    if not user_data:
+        logger.warning(f"[HOROSCOPE_NO_USER] {u(callback.from_user)} - user not found in DB")
+        await callback.answer("❌ Ошибка: пользователь не найден", show_alert=True)
+        return
+
+    if not user_data.get("sign"):
+        logger.warning(f"[HOROSCOPE_NO_SIGN] {u(callback.from_user)} - no sign set")
+        await callback.answer("❗ Сначала выберите знак зодиака", show_alert=True)
+        return
+
+    try:
+        logger.info(f"[HOROSCOPE_FETCH] Getting horoscope for {user_data['sign']}")
+        text = await horoscope_api.get_daily_horoscope(user_data["sign"])
+        logger.info(f"[HOROSCOPE_OK] {u(callback.from_user)} | {user_data['sign']}")
+
+        message = (
+            f"✨ *ГОРОСКОП ДЛЯ {user_data['sign'].upper()}*\n\n"
+            f"{text}\n\n"
+            "💫 _Хорошего дня!_"
         )
-        await event.answer()
+
+        await callback.message.edit_text(
+            message,
+            reply_markup=back_to_menu_kb()
+        )
+    except Exception as e:
+        logger.exception(f"[HOROSCOPE_ERROR] {u(callback.from_user)} | {e}")
+        await callback.message.edit_text(
+            "⚠️ *Ошибка получения гороскопа*\n\n"
+            "Попробуйте позже или обратитесь в поддержку.",
+            reply_markup=back_to_menu_kb()
+        )
+
+    await callback.answer()

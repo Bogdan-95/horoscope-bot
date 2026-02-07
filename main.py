@@ -1,111 +1,60 @@
-""" Главный файл запуска бота """
-import asyncio # Асинхронность
+import asyncio
 import os
-import sys
-import app.database.requests as rq # Импортируем наши запросы к БД
-from datetime import datetime
-from aiogram import Bot, Dispatcher # Основные классы aiogram
 from dotenv import load_dotenv
-from loguru import logger
-from apscheduler.schedulers.asyncio import AsyncIOScheduler
-from app.services.health import update_health # Функция обновления healthcheck
-from app.handlers.user import router as user_router # Импортируем роутер пользователя
-from app.services.horoscope_api import HoroscopeAPI  # Импортируем наш API
-from app.services.backup_service import backup_database
-from app.handlers import admin
 
-# Настройка логов
-logger.remove()
-logger.add(sys.stdout,
-           format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <cyan>{message}</cyan>")
+from aiogram import Bot, Dispatcher
+from aiogram.client.default import DefaultBotProperties
+from aiogram.types import BotCommand
 
-# Инициализируем API глобально
-api = HoroscopeAPI()
+from app.handlers import routers
+from app.utils.logger import logger
+from app.services.scheduler_service import SchedulerService
 
-# =========================
-# ЗАДАЧИ ПЛАНИРОВЩИКА
-# =========================
+load_dotenv()
 
-async def daily_broadcast_task(bot: Bot):
-    """ Проверка каждую минуту: рассылка реальных гороскопов """
-    now = datetime.now().strftime("%H:%M")
-    subscribers = await rq.get_users_by_time(now)
-
-    if subscribers:
-        logger.info(f"Рассылка: Найдено {len(subscribers)} подписчиков на {now}")
-        for user_id, sign in subscribers:
-            try:
-                # Получаем реальный гороскоп для рассылки
-                horo_text = await api.get_daily_horoscope(sign)
-
-                await bot.send_message(
-                    user_id,
-                    f"☀️ *Доброе утро!*\n\n{horo_text}\n\nЖелаем вам продуктивного дня!",
-                    parse_mode="Markdown"
-                )
-                logger.success(f"Рассылка отправлена: {user_id} ({sign})")
-                await asyncio.sleep(0.05)  # Небольшая пауза, чтобы Telegram не забанил за спам
-            except Exception as e:
-                logger.error(f"Ошибка рассылки пользователю {user_id}: {e}")
-
-# =========================
-# ГЛАВНАЯ ФУНКЦИЯ
-# =========================
 
 async def main():
-    load_dotenv()
-    logger.info("Старт бота...")
+    logger.info("🚀 Bot starting...")
+    bot_token = os.getenv("BOT_TOKEN")
+    if not bot_token:
+        raise RuntimeError("BOT_TOKEN is not set in environment variables")
 
-    await rq.db_start()
+    bot = Bot(
+        token=bot_token,
+        default=DefaultBotProperties(parse_mode="Markdown")
+    )
 
-    bot = Bot(token=os.getenv('BOT_TOKEN'))
     dp = Dispatcher()
 
-    # Подключаем роутеры
-    dp.include_router(user_router)
-    dp.include_router(admin.router)
+    # Регистрируем все роутеры
+    for router in routers:
+        dp.include_router(router)
 
-    # Настройка планировщика
-    scheduler = AsyncIOScheduler(timezone="Europe/Moscow")
-    # Задача рассылки
-    scheduler.add_job(
-        daily_broadcast_task,
-        trigger='cron',
-        minute='*',
-        args=[bot]
-    )
-    # HEALTHCHECK - сигнал, что бот жив
-    scheduler.add_job(
-        update_health,
-        trigger="interval",
-        seconds=60
-    )
-    # автобэкап базы данных (SQLite)
-    scheduler.add_job(
-        backup_database,
-        trigger="interval",
-        minutes=10
-    )
+    # Создаём и запускаем планировщик
+    scheduler = SchedulerService(bot)
 
-    scheduler.start()
-    logger.info("Планировщик запущен (МСК).")
+    @dp.startup()
+    async def on_startup():
+        logger.success("🤖 Bot started successfully")
 
-    logger.success("🚀 Бот 2.0 запущен и готов принимать сообщения!")
+        # Устанавливаем команды бота с правильным типом
+        await bot.set_my_commands([
+            BotCommand(command="start", description="Запустить бота"),
+            BotCommand(command="help", description="Помощь"),
+            BotCommand(command="menu", description="Главное меню"),
+            BotCommand(command="subscription", description="Управление рассылкой")
+        ])
 
-    try:
-        await bot.delete_webhook(drop_pending_updates=True)
-        await dp.start_polling(bot)
-    except Exception as e:
-        logger.critical(f"Ошибка при работе бота: {e}")
-    finally:
-        await bot.session.close()
+        # Запускаем планировщик
+        await scheduler.start()
 
-# =========================
-# ЗАПУСК БОТА
-# =========================
+    @dp.shutdown()
+    async def on_shutdown():
+        logger.warning("🛑 Bot shutting down...")
+        await scheduler.stop()
 
-if __name__ == '__main__':
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        logger.warning("Бот остановлен пользователем")
+    await dp.start_polling(bot)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

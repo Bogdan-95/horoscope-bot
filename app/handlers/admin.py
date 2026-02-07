@@ -1,27 +1,32 @@
-# файл с обработчиками команд для администраторов бота
-from aiogram import Router
-from aiogram.filters import Command
+# app/handlers/admin.py
+from aiogram import Router, F
 from aiogram.types import Message
-
-from app.services.uptime import get_uptime
-from app.database.requests import get_users_count
-
+from aiogram.filters import Command
+from app.utils.logger import logger
 
 router = Router()
 
-# ID администраторов бота
-ADMIN_IDS = {930734096}
+# Только для админов (укажи свой ID)
+ADMIN_IDS = [930734096]  # Замени на свой ID
 
-# команда /health - проверка состояния бота
-@router.message(Command("health"))
-async def health_command(message: Message):
-    if message.from_user.id not in ADMIN_IDS:
+
+def check_admin(user_id: int) -> bool:
+    return user_id in ADMIN_IDS
+
+
+@router.message(Command("admin"))
+async def admin_panel(message: Message):
+    if not check_admin(message.from_user.id):
+        await message.answer("⛔ У вас нет прав администратора")
         return
-    users = await get_users_count()
+
+    logger.info(f"[ADMIN_PANEL] {message.from_user.id}")
 
     await message.answer(
-        f"🟢 Бот работает\n"
-        f"⏱ Аптайм: {get_uptime()}"
-        f"📊 Статистика\n"
-        f"👥 Пользователей: {users}"
+        "👨‍💼 *Панель администратора*\n\n"
+        "Доступные команды:\n"
+        "/stats - Статистика бота\n"
+        "/users - Пользователи\n"
+        "/broadcast - Рассылка\n"
+        "/logs - Последние логи"
     )

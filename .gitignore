@@ -10,12 +10,12 @@ __pycache__/
 *.pyd
 
 # Runtime data
-data/*.db
-data/backups/
-data/health.txt
+data/
+logs/
 *.db
-data/database.db
-
+app/data/backups/
+app/data/health.txt
+app/data/database.db
 
 # Environment variables
 .env
@@ -30,11 +30,7 @@ data/database.db
 # System files
 .DS_Store
 Thumbs.db
-DAILY_HOROSCOPE_BOT.MD
-
-# Logs
-*.log
-logs/
+tree.py
 
 # Temporary files
 temp/
