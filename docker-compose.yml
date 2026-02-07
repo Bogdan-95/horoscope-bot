@@ -1,0 +1,57 @@
+# Запуск контейнера
+
+# docker-compose.yml
+version: "3.9"
+
+services:
+  bot:
+    build: .
+    container_name: horoscope_bot
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+    environment:
+      - TZ=Europe/Moscow
+    healthcheck:
+      test: ["CMD", "test", "-f", "/app/data/health.txt"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+
+
+
+
+
+
+
+#version: "3.9"
+#
+#services:
+#  bot:
+#    image: boguk95/horoscope-bot:latest
+#    container_name: horoscope_bot
+#    restart: always
+#    env_file:
+#      - .env
+#    volumes:
+#      - ./data:/app/data
+#      - ./logs:/app/logs
+#    environment:
+#      - TZ=Europe/Moscow
+#    logging:
+#      driver: "json-file"
+#      options:
+#        max-size: "10m"
+#        max-file: "5"
+#
+
+
