@@ -9,7 +9,7 @@ from app.services.horoscope_api import HoroscopeAPI
 from app.services.backup_service import BackupService
 from app.utils.logger import logger
 from app.utils.message_formatter import format_horoscope_message
-
+from app.services.health import update_health
 
 class SchedulerService:
     """
@@ -57,6 +57,7 @@ class SchedulerService:
         # Запускаем фоновые циклы в отдельных задачах
         asyncio.create_task(self._notification_loop())
         asyncio.create_task(self._daily_backup_loop())
+        asyncio.create_task(self._health_update_loop())
 
     async def stop(self):
         """Остановка планировщика"""
@@ -150,3 +151,15 @@ class SchedulerService:
 
             except Exception as e:
                 logger.error(f"⏰ Ошибка отправки пользователю {user.get('id')}: {e}")
+
+    async def _health_update_loop(self):
+        """
+        Цикл обновления health.txt каждые 30 секунд.
+        """
+        while self.is_running:
+            try:
+                update_health()
+                await asyncio.sleep(30)
+            except Exception as e:
+                logger.error(f"Ошибка в health_update_loop: {e}")
+                await asyncio.sleep(30)
