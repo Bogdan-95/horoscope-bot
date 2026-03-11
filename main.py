@@ -14,6 +14,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.types import BotCommand
 
 from app.handlers import routers  # Список всех роутеров (обработчиков сообщений)
+from app.services.health import update_health
 from app.utils.logger import logger  # Кастомный логгер с цветным выводом
 from app.services.scheduler_service import SchedulerService  # Сервис планировщика задач
 
@@ -85,6 +86,10 @@ async def main() -> None:
 
         # Запускаем планировщик ежедневных гороскопов
         await scheduler.start()
+
+        # Создаем health.txt при старте.
+        update_health()
+        logger.info("✅ Health file created")
 
     @dp.shutdown()
     async def on_shutdown() -> None:
