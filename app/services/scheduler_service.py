@@ -2,6 +2,7 @@
 # Сервис планировщика задач для автоматической рассылки гороскопов и бэкапов БД
 
 import asyncio
+import os
 from datetime import datetime, time
 from aiogram import Bot
 from app.database.crud import get_subscribed_users_for_time
@@ -32,10 +33,20 @@ class SchedulerService:
         self.horoscope_api = HoroscopeAPI()
         self.is_running = False
 
+        # Определяем, в Docker ли мы
+        in_docker = os.path.exists('/.dockerenv')
+
+        if in_docker:
+            db_path = "data/database.db"
+            backup_dir = "data/backups"
+        else:
+            db_path = "app/data/database.db"
+            backup_dir = "app/data/backups"
+
         # Инициализируем сервис бэкапов
         self.backup_service = BackupService(
-            db_path="app/data/database.db",
-            backup_dir="app/data/backups",
+            db_path=db_path,
+            backup_dir=backup_dir,
             max_backups=10
         )
 
